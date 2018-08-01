@@ -1,0 +1,28 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-consumer
+  labels:
+    app: kafka-consumer
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: kafka-consumer-deployment
+spec:
+  replicas: 1
+  strategy:
+      type: Recreate
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer
+    spec:
+      containers:
+      - name: kafka-consumer
+        image: nexus.teamdigitale.test/kafka-consumer:1.0.0
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          runAsUser: 0

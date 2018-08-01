@@ -1,0 +1,20 @@
+{
+  "name": "kafka-consumer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-mock-server": "mock-json-server mock-server.json --port=3001"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
+    "kafka-node": "^2.6.1",
+    "kafka-node-topic-consumer": "^0.3.5",
+    "mock-json-server": "^1.0.0",
+    "ssl-root-cas": "^1.2.5",
+    "web-push": "^3.3.2"
+  }
+}
