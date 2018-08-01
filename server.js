@@ -38,7 +38,7 @@ const urlNotification = 'http://datipubblici.default.svc.cluster.local:9000/dati
 const urlCatalog = 'http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/catalog-ds/add'
 const urlKylo = 'http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/kylo/feed'
 
-//TEST
+//TEST LOCALE
 //const urlSub = 'http://datipubblici.default.svc.cluster.local:9001/dati-gov/v1/subscribe'
 //const urlNotification = 'http://datipubblici.default.svc.cluster.local:9001/dati-gov/v1/notification/save'
 
@@ -53,10 +53,12 @@ const urlNotification = 'https://api.daf.teamdigitale.it/dati-gov/v1/notificatio
 const urlcatalog = 'https://api.daf.teamdigitale.it/catalog-manager/v1/catalog-ds/add'
  */
 
-var daf_data_users= ["crimenghini","d_ale","d_mc","d_raf","rlillo","atroisi","raippl","dveronese","davidepanella","ctofani"]
+/* ADMIN PROD */ 
+const daf_data_users_orig= ["crimenghini","d_ale","d_mc","d_raf","rlillo","atroisi","raippl","dveronese","davidepanella","ctofani"]
 
-/*
-var daf_data_users= ["d_ale","raippl","ctofani"]
+
+/* ADMIN TEST  
+const daf_data_users_orig= ["new_andrea","raippl"]
 */
 
 consumer.on('message', function (message) 
@@ -70,15 +72,21 @@ consumer.on('message', function (message)
             console.log('['+message.offset+'] Risposta da Kylo - response.ok: ' + response.ok)
             console.log('['+message.offset+'] Risposta da Kylo - response.statusText: : ' + response.statusText)
             response.json().then((json) => {
-                    console.log('['+message.offset+'] Json ricevuto da kylo: ' + JSON.stringify(json))
+                    //LOG ERRORI KYLO
+                    console.log('['+message.offset+'] *******************************************************************')
+                    console.log('['+message.offset+'] Json ricevuto da kylo - title: ' + json.title)
+                    console.log('['+message.offset+'] Json ricevuto da kylo - description: ' + json.description)
+                    console.log('['+message.offset+'] Json ricevuto da kylo - localizedMessage: ' + json.localizedMessage)
+                    var jsonParse = JSON.parse(json.fields)
+                    if(jsonParse){
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.success: ' + jsonParse.success)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.description: ' + jsonParse.description)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.validationErrors: ' + jsonParse.validationErrors)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.allErrors: ' + jsonParse.allErrors)
+                        console.log('['+message.offset+'] *******************************************************************')
+                    }
                     if(!response.ok){
-                     /*  var jsonParse = JSON.parse(json.fields)
-                      if(jsonParse.description.indexOf("TimeoutException")!==-1){
-                        console.log('['+message.offset+'] TimeoutException ricevuto da Kylo')
-                        insertSuccess(value, message)
-                      }else{ */
                         insertError(value, message, json)
-                     // }
                     }else{
                         var jsonParse = JSON.parse(json.fields)
                         if(jsonParse.success)
@@ -92,6 +100,7 @@ consumer.on('message', function (message)
 })
 
 function insertSuccess(value, message){
+    var daf_data_users = [].concat(daf_data_users_orig)
     console.log('['+message.offset+'] Creazione feed avvenuta con successo')
     let responseCatalog = createCatalog(value);
     responseCatalog.then((response) => {
@@ -121,10 +130,11 @@ function insertSuccess(value, message){
 
 
 function insertError(value, message, json){
+    var daf_data_users = [].concat(daf_data_users_orig)
     console.log('['+message.offset+'] Errore durante la chiamata a Kylo')
     if(json.fields){
         var jsonParse = JSON.parse(json.fields)
-        if(!jsonParse.success && jsonParse.feedProcessGroup.allErrors.length>0){
+        if(!jsonParse.success && jsonParse.feedProcessGroup && jsonParse.feedProcessGroup.allErrors && jsonParse.feedProcessGroup.allErrors.length>0){
             console.log('['+message.offset+'] Sono presenti errori nel json ricevuto da kylo') 
             var errorsMsg = ''
             for(i=0;i<jsonParse.feedProcessGroup.allErrors.length;i++){
@@ -133,7 +143,7 @@ function insertError(value, message, json){
             }
         }
     } else {
-        errorsMsg = 'Errore generico durante la chiamata a Kylo.'
+        errorsMsg = 'Errore generico durante la creazione del dataset.'
     }
     if(daf_data_users.indexOf(value.user)>-1){
         console.log('['+message.offset+'] Utente già presente nei daf_data_user')
