@@ -39,9 +39,10 @@ pipeline {
       steps { 
         script {
             if(env.BRANCH_NAME=='testci'){
+                //  sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer1.yaml
                 sh ''' COMMIT_ID=$(echo ${GIT_COMMIT}|cut -c 1-6);
                 cd kubernetes/test
-                sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer1.yaml;kubectl apply -f kafka-consumer1.yaml --namespace=testci --validate=false'''             
+               kubectl apply -f kafka-consumer.yaml --namespace=testci --validate=false'''             
           }
         }
       }
