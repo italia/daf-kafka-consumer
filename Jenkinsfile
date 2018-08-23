@@ -2,13 +2,13 @@ pipeline {
   agent any
   environment
   {    //it was in every stage
-    IMAGE_NAME = 'nexus.teamdigitale.test/kafka-consumer' 
+    IMAGE_NAME = 'nexus.teamdigitale.test/kafka-consumer'
   }
   stages {
     stage('Build') {
-      steps { 
-        script {          
-        sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker build . -t $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID' 
+      steps {
+        script {
+        sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker build . -t $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'
         }
       }
     }
@@ -36,7 +36,8 @@ pipeline {
       }
     }
     stage('Staging') {
-      steps { 
+
+      steps {
         script {
             if(env.BRANCH_NAME=='testci'){
                 //  sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer1.yaml
@@ -49,4 +50,5 @@ pipeline {
       }
     }
   }
+
 }
