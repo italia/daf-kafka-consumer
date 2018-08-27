@@ -13,25 +13,25 @@ pipeline {
       }
     }
     stage('Test') {
-      steps { //sh' != sh'' only one sh command  
-      script {         
+      steps { //sh' != sh'' only one sh command
+      script {
         sh '''
-	COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); 
+	COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6);
         CONTAINERID=$(docker run -d -p 3000:3000 $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID);
         sleep 5s;
-        docker stop ${CONTAINERID}; 
+        docker stop ${CONTAINERID};
         docker rm ${CONTAINERID}
-	''' 
+	'''
       }
     }
-    }    
+    }
     stage('Upload'){
       steps {
-        script { 
-          if(env.BRANCH_NAME == 'testci'  || env.BRANCH_NAME == 'master' ){ 
-            sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker push $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID' 
-            sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker rmi $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'  
-          }       
+        script {
+          if(env.BRANCH_NAME == 'testci'  || env.BRANCH_NAME == 'master' ){
+            sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker push $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'
+            sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker rmi $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'
+          }
         }
       }
     }
@@ -44,11 +44,10 @@ pipeline {
                 sh ''' COMMIT_ID=$(echo ${GIT_COMMIT}|cut -c 1-6);
                 cd kubernetes/test;
                 sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer$BUILD_NUMBER.yaml;
-                kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging apply -f kafka-consumer$BUILD_NUMBER.yaml --namespace=testci --validate=false'''             
+                kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging apply -f kafka-consumer$BUILD_NUMBER.yaml --namespace=testci --validate=false'''
           }
         }
       }
     }
   }
-
 }
