@@ -28,7 +28,7 @@ pipeline {
     stage('Upload'){
       steps {
         script { 
-          if(env.BRANCH_NAME == 'testci' ){ 
+          if(env.BRANCH_NAME == 'testci'  || env.BRANCH_NAME == 'master' ){ 
             sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker push $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID' 
             sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker rmi $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'  
           }       
@@ -38,7 +38,7 @@ pipeline {
     stage('Staging') {
       steps { 
         script {
-            if(env.BRANCH_NAME=='testci'){
+            if(env.BRANCH_NAME=='testci' || env.BRANCH_NAME == 'master'){
                 //  sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer1.yaml
                 sh ''' COMMIT_ID=$(echo ${GIT_COMMIT}|cut -c 1-6);
                 cd kubernetes/test;
