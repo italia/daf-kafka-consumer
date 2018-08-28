@@ -3,95 +3,83 @@ var fetch = require('isomorphic-fetch')
 
 var kafka = require('kafka-node'),
    Consumer = kafka.Consumer,
-   //TEST
-   //client = new kafka.Client("192.168.30.12:2181/kafka", "my-client-id", {
-    
-   //PROD
-   client = new kafka.Client("192.168.0.23:2181/kafka", "my-client-id", {
-       sessionTimeout: 300,
-       spinDelay: 100,
-       retries: 2
-   });
-   offset = new kafka.Offset(client);
-   latestOffset = 0
-   offset.fetch([{ topic: 'creationfeed', partition: 0, time: -1 }], function (err, data) {
-       latestOffset = data['creationfeed']['0'][0];
-       console.log("Consumer current offset: " + latestOffset);
+   client = new kafka.Client(process.env.KAFKA_URL, process.env.CLIENT_ID, {
+       sessionTimeout: parseInt(process.env.SESSION_TIMEOUT),
+       spinDelay: parseInt(process.env.SPIN_DELAY),
+       retries: parseInt(process.env.RETRIES)
    });
    consumer = new Consumer(
-        client,
-       [
-           { topic: 'creationfeed', partition: 0, offset: 0 }
-       ],
-       {
-           fromOffset: true
-       }        
-   ); 
+    client,
+    [
+        { topic: process.env.FEED_NAME, partition: 0, offset: -1 }
+    ],
+    {
+        fromOffset: true
+    }        
+    ); 
+    offset = new kafka.Offset(client);
+    latestOffset = 0
+    offset.fetch([{ topic: process.env.FEED_NAME, partition: 0, time: -1 }], function (err, data) {
+    latestOffset = data[process.env.FEED_NAME]['0'][0];
+    console.log("Last offset on kafka: " + latestOffset);
+    let responseLastWorkedOffset = getLastWorkedOffset();
+            responseLastWorkedOffset.then((response) => {
+                response.json().then((json) => {
+                    console.log("Last worked offset: " + json.offset);
+                    consumer.setOffset(process.env.FEED_NAME, 0, json.offset)
+                })
+            })
+    });
 
 const webpush = require('web-push')
-const publicVapidKey = 'BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o';
-const privateVapidKey = '_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg';
-webpush.setVapidDetails('mailto:daf@teamdigitale.it', publicVapidKey, privateVapidKey);
-
-const urlSub = 'http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/subscribe'
-const urlNotification = 'http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/notification/save' 
-const urlCatalog = 'http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/catalog-ds/add'
-const urlKylo = 'http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/kylo/feed'
-
-//TEST
-//const urlSub = 'http://datipubblici.default.svc.cluster.local:9001/dati-gov/v1/subscribe'
-//const urlNotification = 'http://datipubblici.default.svc.cluster.local:9001/dati-gov/v1/notification/save'
-
-//MOCK
-//const urlKylo = 'http://localhost:3001/catalog-manager/v1/kylo/feed'
-//const urlCatalog = 'http://localhost:3001/catalog-manager/v1/catalog-ds/add'
-
-//KONG
-/* const urlSub = 'https://api.daf.teamdigitale.it/dati-gov/v1/subscribe'
-const urlKylo = 'https://api.daf.teamdigitale.it/catalog-manager/v1/kylo/feed'
-const urlNotification = 'https://api.daf.teamdigitale.it/dati-gov/v1/notification/save' 
-const urlcatalog = 'https://api.daf.teamdigitale.it/catalog-manager/v1/catalog-ds/add'
- */
-
-var daf_data_users= ["crimenghini","d_ale","d_mc","d_raf","rlillo","atroisi","raippl","dveronese","davidepanella","ctofani"]
-
-/*
-var daf_data_users= ["d_ale","raippl","ctofani"]
-*/
+webpush.setVapidDetails(process.env.MAILTO, process.env.PUBLIC_VAPID_KEY, process.env.PRIVATE_VAPID_KEY);
 
 consumer.on('message', function (message) 
 {
-   console.log('offset ' + message.offset)
-    if(message.offset>=latestOffset){
-       console.log('Processo messaggio: ' + message.offset);
-        let value = JSON.parse(message.value)
-        let responseKylo = createKyloFeed(value);
-        responseKylo.then((response) => {
-            console.log('['+message.offset+'] Risposta da Kylo - response.ok: ' + response.ok)
-            console.log('['+message.offset+'] Risposta da Kylo - response.statusText: : ' + response.statusText)
-            response.json().then((json) => {
-                    console.log('['+message.offset+'] Json ricevuto da kylo: ' + JSON.stringify(json))
-                    if(!response.ok){
-                     /*  var jsonParse = JSON.parse(json.fields)
-                      if(jsonParse.description.indexOf("TimeoutException")!==-1){
-                        console.log('['+message.offset+'] TimeoutException ricevuto da Kylo')
-                        insertSuccess(value, message)
-                      }else{ */
-                        insertError(value, message, json)
-                     // }
-                    }else{
+    console.log('Processo messaggio: ' + message.offset);
+    let value = JSON.parse(message.value)
+    let responseKylo = createKyloFeed(value);
+    responseKylo.then((response) => {
+        console.log('['+message.offset+'] Risposta da Kylo - response.ok: ' + response.ok)
+        console.log('['+message.offset+'] Risposta da Kylo - response.statusText: : ' + response.statusText)
+        response.json().then((json) => {
+                //LOG ERRORI KYLO
+                console.log('['+message.offset+'] *******************************************************************')
+                console.log('['+message.offset+'] Json ricevuto da kylo - title: ' + json.title)
+                console.log('['+message.offset+'] Json ricevuto da kylo - description: ' + json.description)
+                console.log('['+message.offset+'] Json ricevuto da kylo - localizedMessage: ' + json.localizedMessage)
+                try{
+                    var jsonParse = JSON.parse(json.fields)
+                    if(jsonParse){
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.success: ' + jsonParse.success)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.description: ' + jsonParse.description)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.validationErrors: ' + jsonParse.validationErrors)
+                        console.log('['+message.offset+'] Json ricevuto da kylo - jsonParse.allErrors: ' + jsonParse.allErrors)
+                        console.log('['+message.offset+'] *******************************************************************')
+                    }
+                } catch(errors){
+                    console.log('Errore generico, campo fields non presente 1')
+                }
+
+                if(!response.ok){
+                    insertError(value, message, json)
+                }else{
+                    try{
                         var jsonParse = JSON.parse(json.fields)
                         if(jsonParse.success)
                             insertSuccess(value, message)
                         else 
                             insertError(value, message, json)
+                    } catch (errors){
+                        console.log('Errore generico, campo fields non presente 2')
                     }
-                })
-            }) 
-   } 
+                }
+            })
+        })
 })
 
 function insertSuccess(value, message){
+    var daf_data_users = (process.env.DAF_DATA_USERS_ORIG).split(',')
     console.log('['+message.offset+'] Creazione feed avvenuta con successo')
     let responseCatalog = createCatalog(value);
     responseCatalog.then((response) => {
@@ -121,19 +109,22 @@ function insertSuccess(value, message){
 
 
 function insertError(value, message, json){
+    var daf_data_users = (process.env.DAF_DATA_USERS_ORIG).split(',')
     console.log('['+message.offset+'] Errore durante la chiamata a Kylo')
     if(json.fields){
         var jsonParse = JSON.parse(json.fields)
-        if(!jsonParse.success && jsonParse.feedProcessGroup.allErrors.length>0){
+        if(!jsonParse.success && jsonParse.feedProcessGroup && jsonParse.feedProcessGroup.allErrors && jsonParse.feedProcessGroup.allErrors.length>0){
             console.log('['+message.offset+'] Sono presenti errori nel json ricevuto da kylo') 
             var errorsMsg = ''
             for(i=0;i<jsonParse.feedProcessGroup.allErrors.length;i++){
                 console.log('['+message.offset+'] errore ' + i + ':' + jsonParse.feedProcessGroup.allErrors[i].message)
                 errorsMsg = jsonParse.feedProcessGroup.allErrors[i].message + '; ' + errorsMsg
             }
+        }else{
+            errorsMsg = 'Errore generico durante la creazione del dataset.'
         }
     } else {
-        errorsMsg = 'Errore generico durante la chiamata a Kylo.'
+        errorsMsg = 'Errore generico durante la creazione del dataset.'
     }
     if(daf_data_users.indexOf(value.user)>-1){
         console.log('['+message.offset+'] Utente già presente nei daf_data_user')
@@ -187,7 +178,7 @@ function pushNotification(username, message, notification, token){
 }
 
 async function getSubscription(username, token) {
-   const response = await fetch( urlSub + "/" + username , {
+   const response = await fetch( process.env.URL_SUB + "/" + username , {
        method: 'GET',
        headers: {
            'Accept': 'application/json',
@@ -201,7 +192,7 @@ async function getSubscription(username, token) {
 async function createKyloFeed(value) {
    const payload = value.payload
    const fileType = payload.operational.file_type
-   const response = await fetch( urlKylo + "/" + fileType , {
+   const response = await fetch( process.env.URL_KYLO + "/" + fileType , {
        method: 'POST',
        timeout: 240000,
        headers: {
@@ -216,7 +207,7 @@ async function createKyloFeed(value) {
 
 async function createCatalog(value) {
     const payload = value.payload
-    const response = await fetch(urlCatalog, {
+    const response = await fetch(process.env.URL_CATALOG, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -229,7 +220,7 @@ async function createCatalog(value) {
  }
 
 async function addNotification(notification, token) {
-   const response = await fetch( urlNotification , {
+   const response = await fetch(process.env.URL_NOTIFICATION , {
        method: 'POST',
        headers: {
            'Accept': 'application/json',
@@ -239,6 +230,17 @@ async function addNotification(notification, token) {
        body: JSON.stringify(notification)
    })
    return response;
+}
+
+async function getLastWorkedOffset(){
+    const response = await fetch(process.env.URL_LAST_WORKED_OFFSET, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    return response;
 }
 
 function getFormattedDate() {

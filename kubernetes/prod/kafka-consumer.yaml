@@ -18,6 +18,82 @@ spec:
         securityContext:
           privileged: true
           runAsUser: 0
+        env:
+          - name: KAFKA_URL
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: kafkaUrl
+          - name: CLIENT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: clientId
+          - name: SESSION_TIMEOUT
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: sessionTimeout
+          - name: SPIN_DELAY
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: spinDelay
+          - name: RETRIES
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: retries
+          - name: FEED_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: feedName
+          - name: MAILTO
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: mailto
+          - name: PUBLIC_VAPID_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: publicVapidKey
+          - name: PRIVATE_VAPID_KEY
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: privateVapidKey
+          - name: DAF_DATA_USERS_ORIG
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: daf_data_users_orig
+          - name: URL_SUB
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlSub
+          - name: URL_KYLO
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlKylo
+          - name: URL_CATALOG
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlCatalog
+          - name: URL_NOTIFICATION
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlNotification
+          - name: URL_LAST_WORKED_OFFSET
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlLastWorkedOffset
       hostAliases:
       - ip: "192.168.0.21"
         hostnames:
