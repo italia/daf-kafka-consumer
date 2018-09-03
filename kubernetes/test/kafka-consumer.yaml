@@ -44,11 +44,16 @@ spec:
               configMapKeyRef:
                 name: kafka-consumer-conf
                 key: retries
-          - name: FEED_NAME
+          - name: TOPIC_1_NAME
             valueFrom:
               configMapKeyRef:
                 name: kafka-consumer-conf
-                key: feedName
+                key: topic1Name
+          - name: TOPIC_2_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: topic2Name
           - name: MAILTO
             valueFrom:
               configMapKeyRef:
