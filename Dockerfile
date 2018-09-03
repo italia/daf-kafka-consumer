@@ -8,4 +8,4 @@ RUN npm install
 
 ADD . /usr/local/src
 
-CMD ["sh", "-c", "node server.js"]
+CMD ["sh", "-c", "node serverNew.js"]
