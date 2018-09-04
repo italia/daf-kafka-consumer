@@ -1,5 +1,5 @@
-// PROVA TEST LOCALE
-/* KAFKA_URL="192.168.30.12:2181/kafka"
+/* // PROVA TEST LOCALE
+KAFKA_URL="192.168.30.12:2181/kafka"
 CLIENT_ID="my-client-id"
 SESSION_TIMEOUT=300
 SPIN_DELAY=100
@@ -13,10 +13,10 @@ PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1Ody
 PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
 DAF_DATA_USERS_ORIG="new_andrea,raippl"
 URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
-URL_KYLO="http://127.0.0.1:9000/catalog-manager/v1/kylo/feed"
-URL_CATALOG="http://127.0.0.1:9000/catalog-manager/v1/catalog-ds/add"
+URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
+URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
 URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
-URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" */
+URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last"  */
 
 //PRODUCTION (CONFIGMAP)
 KAFKA_URL=process.env.KAFKA_URL
@@ -113,7 +113,7 @@ consumer2.on('message', function(message){
     try{
         console.log('A message from notification: ', message);
         let value = JSON.parse(message.value)
-        const notification = {user: value.user, notificationtype:TOPIC_2_TYPE, info:{name: value.notification.name, title: value.notification.title, description: value.notification.description, link: value.notification.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+        const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
         if(notification && value.user && value.token)
             insertNotification(notification, value.user, value.token)
         else console.log('Dati mancanti nel messagio')
@@ -240,26 +240,26 @@ function insertError(value, message, json){
     }
 }
 
-function pushNotification(username, message, notification, token){
+function pushNotification(username, notification, token){
     let responseSub = getSubscription(username, token);
     responseSub.then((response) => {
         if(response.ok){
             response.json().then((subscriptions) => {
-                console.log('['+message.offset+'] sono state trovate ' + subscriptions.length + ' subscription per utente ' + username)
+                console.log('Sono state trovate ' + subscriptions.length + ' subscription per utente ' + username)
                 if(subscriptions.length>0){
                     subscriptions.map((sub) => {
                         try{
                             webpush.sendNotification(sub, JSON.stringify(notification))
-                            .then(() => console.log('['+message.offset+'] Notifica Push per '+username+' - Inviata con successo: ' + JSON.stringify(sub)))
-                            .catch(() => console.log('['+message.offset+'] Notifica Push per '+username+' - Errore durante invio della notifica: ' + JSON.stringify(sub)))
+                            .then(() => console.log('Notifica Push per '+username+' - Inviata con successo: ' + JSON.stringify(sub)))
+                            .catch(() => console.log('Notifica Push per '+username+' - Errore durante invio della notifica: ' + JSON.stringify(sub)))
                         }catch(exception){
-                            console.log('['+message.offset+'] Errore durante il push della notifica: ' + JSON.stringify(sub))
+                            console.log('Errore durante il push della notifica: ' + JSON.stringify(sub))
                         }   
                     })
                 }
             })
         } else {
-            console.log('['+message.offset+'] Non sono state trovate subscription per l\'utente: ' + username)
+            console.log('Non sono state trovate subscription per l\'utente: ' + username)
         }
     })
 }
