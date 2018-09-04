@@ -9,6 +9,8 @@ kubectl create configmap kafka-consumer-conf \
 --from-literal=daf_data_users_orig="new_andrea,raippl" \
 --from-literal=topic1Name="creationfeed" \
 --from-literal=topic2Name="notification" \
+--from-literal=topic1Type="kylo_feed" \
+--from-literal=topic2Type="generic" \
 --from-literal=kafkaUrl="192.168.30.12:2181/kafka" \
 --from-literal=mailto="mailto:daf@teamdigitale.it" \
 --from-literal=privateVapidKey="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg" \

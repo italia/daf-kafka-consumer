@@ -54,6 +54,16 @@ spec:
               configMapKeyRef:
                 name: kafka-consumer-conf
                 key: topic2Name
+          - name: TOPIC_1_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: topic1Type
+          - name: TOPIC_2_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: topic2Type
           - name: MAILTO
             valueFrom:
               configMapKeyRef:
