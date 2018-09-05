@@ -12,11 +12,12 @@ MAILTO="mailto:daf@teamdigitale.it"
 PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
 PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
 DAF_DATA_USERS_ORIG="new_andrea,raippl"
-URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
 URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
 URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
+URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
 URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
-URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last"  */
+URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" 
+URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group" */
 
 //PRODUCTION (CONFIGMAP)
 KAFKA_URL=process.env.KAFKA_URL
@@ -37,6 +38,7 @@ URL_KYLO=process.env.URL_KYLO
 URL_CATALOG=process.env.URL_CATALOG
 URL_NOTIFICATION=process.env.URL_NOTIFICATION
 URL_LAST_WORKED_OFFSET=process.env.URL_LAST_WORKED_OFFSET
+URL_IPA_GROUP=process.env.URL_IPA_GROUP 
 
 var fetch = require('isomorphic-fetch')
 
@@ -65,8 +67,9 @@ offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, d
     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
-                    console.log("Last worked offset [TOPIC_1_TYPE]: " + json.offset);
-                    consumer.setOffset(TOPIC_1_NAME, 0, json.offset)
+                    var lastOffset = parseInt(json.offset + 1)
+                    console.log("Last worked offset [TOPIC_1_TYPE]: " + lastOffset);
+                    consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
                 })
             })
     })
@@ -93,8 +96,9 @@ offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, 
     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
-                    console.log("Last worked offset [TOPIC_2_TYPE]: " + json.offset);
-                    consumer2.setOffset(TOPIC_2_NAME, 0, json.offset)
+                    var lastOffset = parseInt(json.offset + 1)
+                    console.log("Last worked offset [TOPIC_2_TYPE]: " + lastOffset);
+                    consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
                 })
             })
     })
@@ -111,20 +115,49 @@ consumer2.on('error', function (err)
 
 consumer2.on('message', function(message){
     try{
-        console.log('A message from notification: ', message);
+        console.log('['+message.offset+'] A message from notification: ', message);
         let value = JSON.parse(message.value)
-        const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
-        if(notification && value.user && value.token)
-            insertNotification(notification, value.user, value.token)
-        else console.log('Dati mancanti nel messagio')
+        if(value.user){
+            console.log('Insert notification for user: ' + value.user)
+            const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+            if(notification && value.user && value.token)
+                insertNotification(message, notification, value.user, value.token)
+            else console.log('['+message.offset+'] Dati mancanti nel messagio')
+        }else if(value.group){
+            console.log('Insert notification for group: ' + value.group)
+            let responseUsersGroup = getUsersFormGroup(value.group, value.token);
+            responseUsersGroup.then((response) => {
+                response.json().then((json) => {
+                    if(json.member_user){
+                        var users = json.member_user
+                        if(users.length>0){
+                            console.log('users: ' + users)
+                            for(i=0;i<users.length;i++){
+                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                                if(notification && users[i] && value.token)
+                                    insertNotification(message, notification, users[i], value.token)
+                                else console.log('['+message.offset+'] Dati mancanti nel messagio')
+                            }
+                        } else {
+                            console.log('['+message.offset+'] Non sono stati trovati utenti appartenenti al gruppo: ' + value.group)
+                        }
+                    } else {
+                        console.log('['+message.offset+'] Non è stato possibile reperire gli utenti appartenenti al gruppo: ' + value.group)
+                    }
+                })
+            })
+            
+        }else{
+            console.log('['+message.offset+'] Campo user o group non presente nel messaggio ' +  message)
+        }
     } catch(errors){
-        console.log('Errore durante l\'elaborazione del messaggio: ' + message)
+        console.log('['+message.offset+'] Errore durante l\'elaborazione del messaggio: ' + message)
     }
 });
 
 consumer.on('message', function (message) 
 {
-    console.log('Processo messaggio: ' + message.offset);
+    console.log('['+message.offset+'] Processo messaggio');
     try{
         let value = JSON.parse(message.value)
         let responseKylo = createKyloFeed(value);
@@ -157,32 +190,30 @@ consumer.on('message', function (message)
                             else 
                                 insertError(value, message, json)
                         } catch (errors){
-                            console.log('Errore generico, campo fields non presente 2')
+                            console.log('['+message.offset+'] Errore generico, campo fields non presente 2')
                         }
                     }
                 })
             })
         } catch(errors){
-            console.log('Errore durante l\'elaborazione del messaggio: ' + message + " ERRORE: " + errors)
+            console.log('['+message.offset+'] Errore durante l\'elaborazione del messaggio: ' + message + " ERRORE: " + errors)
         }
 }) 
 
-function insertNotification(notification, user, token){
+function insertNotification(message, notification, user, token){
     try{
-        console.log('Elaboro notifica: ' + JSON.stringify(notification))
-        console.log('addNotification')
+        console.log('['+message.offset+'] Inserisco notifica: ' + JSON.stringify(notification))
         let responseNot = addNotification(notification, token)
         responseNot.then((response) => {
             if(response.ok){
-                console.log('Notifica inserita con successo')
-                console.log('pushNotification')
-                pushNotification(user, notification, token)
+                console.log('['+message.offset+'] Notifica inserita con successo')
+                pushNotification(message, user, notification, token)
             }else{
-                console.log('Errore nell inserimento della notifica: ' + response.statusText)
+                console.log('['+message.offset+'] Errore nell inserimento della notifica: ' + response.statusText)
             }
         }) 
     } catch(errors){
-        console.log('Errore generico nell\'elaborazione')
+        console.log('['+message.offset+'] Errore generico nell\'elaborazione')
     }
 }
 
@@ -201,7 +232,7 @@ function insertSuccess(value, message){
             for(j=0;j<daf_data_users.length;j++){
                 const notificationSuccess = {user: daf_data_users[j], notificationtype:TOPIC_1_TYPE, info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title}, timestamp: getFormattedDate() , status:0, offset: message.offset}
                 console.log('['+message.offset+'] Aggiungo notifica SUCCESS ad utente ' + daf_data_users[j])
-                insertNotification(notificationSuccess, daf_data_users[j], value.token)
+                insertNotification(message, notificationSuccess, daf_data_users[j], value.token)
             }
         })
     })
@@ -235,31 +266,31 @@ function insertError(value, message, json){
     for(j=0;j<daf_data_users.length;j++){
         const notificationError = {user: daf_data_users[j], notificationtype:TOPIC_1_TYPE, info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
         console.log('['+message.offset+'] Aggiungo notifica ERROR ad utente ' + daf_data_users[j])
-        insertNotification(notificationError, daf_data_users[j], value.token)
+        insertNotification(message, notificationError, daf_data_users[j], value.token)
 
     }
 }
 
-function pushNotification(username, notification, token){
+function pushNotification(message, username, notification, token){
     let responseSub = getSubscription(username, token);
     responseSub.then((response) => {
         if(response.ok){
             response.json().then((subscriptions) => {
-                console.log('Sono state trovate ' + subscriptions.length + ' subscription per utente ' + username)
+                console.log('['+message.offset+'] Sono state trovate ' + subscriptions.length + ' subscription per utente ' + username)
                 if(subscriptions.length>0){
                     subscriptions.map((sub) => {
                         try{
                             webpush.sendNotification(sub, JSON.stringify(notification))
-                            .then(() => console.log('Notifica Push per '+username+' - Inviata con successo: ' + JSON.stringify(sub)))
-                            .catch(() => console.log('Notifica Push per '+username+' - Errore durante invio della notifica: ' + JSON.stringify(sub)))
+                            .then(() => console.log('['+message.offset+'] Notifica Push per '+username+' - Inviata con successo: ' + JSON.stringify(sub)))
+                            .catch(() => console.log('['+message.offset+'] Notifica Push per '+username+' - Errore durante invio della notifica: ' + JSON.stringify(sub)))
                         }catch(exception){
-                            console.log('Errore durante il push della notifica: ' + JSON.stringify(sub))
+                            console.log('['+message.offset+'] Errore durante il push della notifica: ' + JSON.stringify(sub))
                         }   
                     })
                 }
             })
         } else {
-            console.log('Non sono state trovate subscription per l\'utente: ' + username)
+            console.log('['+message.offset+'] Non sono state trovate subscription per l\'utente: ' + username)
         }
     })
 }
@@ -275,6 +306,18 @@ async function getSubscription(username, token) {
    })
    return response;
 }
+
+async function getUsersFormGroup(group, token) {
+    const response = await fetch(URL_IPA_GROUP + "/" + group , {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    return response;
+ }
 
 async function createKyloFeed(value) {
    const payload = value.payload
