@@ -109,6 +109,11 @@ spec:
               configMapKeyRef:
                 name: kafka-consumer-conf
                 key: urlLastWorkedOffset
+          - name: URL_IPA_GROUP
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlIpaGroup
       hostAliases:
       - ip: "192.168.0.21"
         hostnames:
