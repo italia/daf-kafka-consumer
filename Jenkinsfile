@@ -8,6 +8,7 @@ pipeline {
     stage('Build') {
       steps {
         script {
+        slackSend (message: "BUILD START: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' CHECK THE RESULT ON: https://cd.daf.teamdigitale.it/blue/organizations/jenkins/CI-Kafka-Consumer/activity")                  
         sh 'COMMIT_ID=$(echo ${GIT_COMMIT} | cut -c 1-6); docker build . -t $IMAGE_NAME:$BUILD_NUMBER-$COMMIT_ID'
         }
       }
@@ -46,9 +47,15 @@ pipeline {
                 sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer$BUILD_NUMBER.yaml;
                 kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging delete -f kafka-consumer$BUILD_NUMBER.yaml || true;
                 kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging create -f kafka-consumer$BUILD_NUMBER.yaml '''
+                slackSend (color: '#00FF00', message: "SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' https://cd.daf.teamdigitale.it/blue/organizations/jenkins/CI-Kafka-Consumer/activity")
           }
         }
       }
     }
   }
+  post { 
+        failure { 
+            slackSend (color: '#ff0000', message: "FAIL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' https://cd.daf.teamdigitale.it/blue/organizations/jenkins/CI-Kafka-Consumer/activity")
+        }
+    }
 }
