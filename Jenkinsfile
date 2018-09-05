@@ -44,7 +44,8 @@ pipeline {
                 sh ''' COMMIT_ID=$(echo ${GIT_COMMIT}|cut -c 1-6);
                 cd kubernetes/test;
                 sed "s#image: nexus.teamdigitale.test/kafka.*#image: nexus.teamdigitale.test/kafka-consumer:$BUILD_NUMBER-$COMMIT_ID#" kafka-consumer.yaml > kafka-consumer$BUILD_NUMBER.yaml;
-                kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging apply -f kafka-consumer$BUILD_NUMBER.yaml --validate=false'''
+                kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging delete -f kafka-consumer$BUILD_NUMBER.yaml -n testci|| true;
+                kubectl --kubeconfig=${JENKINS_HOME}/.kube/config.teamdigitale-staging create -f kafka-consumer$BUILD_NUMBER.yaml -n testci '''
           }
         }
       }
