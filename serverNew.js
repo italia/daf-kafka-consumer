@@ -74,7 +74,6 @@ offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, d
             })
     })
 
-
 var client2 = new kafka.Client(KAFKA_URL, CLIENT_ID, {
     sessionTimeout: SESSION_TIMEOUT,
     spinDelay: SPIN_DELAY,
@@ -92,7 +91,7 @@ var consumer2 = new kafka.Consumer(
 
 var offset2 = new kafka.Offset(client2);
 
-offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
+ offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
@@ -101,16 +100,16 @@ offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, 
                     consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
                 })
             })
-    })
+    }) 
 
 consumer.on('error', function (err) 
 {
-   console.log('Errore nel processare il messaggio, consumer: '+message.offset+' : ' + err.toString());
+   console.log('Errore nel processare il messaggio, consumer : ' + err.toString());
 });
 
 consumer2.on('error', function (err) 
 {
-   console.log('Errore nel processare il messaggio, consumer2: '+message.offset+' : ' + err.toString());
+   console.log('Errore nel processare il messaggio, consumer2: ' + err.toString());
 });
 
 consumer2.on('message', function(message){
@@ -238,7 +237,6 @@ function insertSuccess(value, message){
     })
 }
 
-
 function insertError(value, message, json){
     var daf_data_users = (DAF_DATA_USERS_ORIG).split(',')
     console.log('['+message.offset+'] Errore durante la chiamata a Kylo')
@@ -264,7 +262,7 @@ function insertError(value, message, json){
         console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
     }
     for(j=0;j<daf_data_users.length;j++){
-        const notificationError = {user: daf_data_users[j], notificationtype:TOPIC_1_TYPE, info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
+        const notificationError = {user: daf_data_users[j], notificationtype: TOPIC_1_TYPE + '_error', info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
         console.log('['+message.offset+'] Aggiungo notifica ERROR ad utente ' + daf_data_users[j])
         insertNotification(message, notificationError, daf_data_users[j], value.token)
 
