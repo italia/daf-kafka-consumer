@@ -114,3 +114,8 @@ spec:
               configMapKeyRef:
                 name: kafka-consumer-conf
                 key: urlIpaGroup
+          - name: URL_NIFI_START
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlNIFIStart

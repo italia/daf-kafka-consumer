@@ -39,6 +39,7 @@ URL_CATALOG=process.env.URL_CATALOG
 URL_NOTIFICATION=process.env.URL_NOTIFICATION
 URL_LAST_WORKED_OFFSET=process.env.URL_LAST_WORKED_OFFSET
 URL_IPA_GROUP=process.env.URL_IPA_GROUP 
+URL_NIFI_START=process.env.URL_NIFI_START
 
 var fetch = require('isomorphic-fetch')
 
@@ -184,9 +185,21 @@ consumer.on('message', function (message)
                     }else{
                         try{
                             var jsonParse = JSON.parse(json.fields)
-                            if(jsonParse.success)
+                            if(jsonParse.success){
+                                if(value.payload.operational.type_info){
+                                  if(value.payload.operational.type_info.dataset_type==='derived_sql'){
+                                    let responseNifi = startNifiProcessor(value.payload.dcatapit.owner_org, value.payload.dcatapit.name, value.token)
+                                    responseNifi.then(response=>{
+                                      if(response.ok){
+                                        console.log("["+message.offset+"] Processore avviato correttamente per il dataset derivato")
+                                      }else{
+                                        console.log("["+message.offset+"] Errore nell'avvio del processore NIFI per il dataset derivato")
+                                      }
+                                    })
+                                  }
+                                }
                                 insertSuccess(value, message)
-                            else 
+                            }else 
                                 insertError(value, message, json)
                         } catch (errors){
                             console.log('['+message.offset+'] Errore generico, campo fields non presente 2')
@@ -369,6 +382,19 @@ async function getLastWorkedOffset(topicName){
         }
     })
     return response;
+}
+
+async function startNifiProcessor(org, dataset_name, token){
+  const response = await fetch(URL_NIFI_START + "/" +org+"/"+dataset_name, {
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+      }
+  })
+  
+  return response;
 }
 
 function getFormattedDate() {

@@ -114,6 +114,11 @@ spec:
               configMapKeyRef:
                 name: kafka-consumer-conf
                 key: urlIpaGroup
+          - name: URL_NIFI_START
+            valueFrom:
+              configMapKeyRef:
+                name: kafka-consumer-conf
+                key: urlNIFIStart
       hostAliases:
       - ip: "192.168.0.21"
         hostnames:
