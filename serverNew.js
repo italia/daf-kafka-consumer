@@ -1,23 +1,24 @@
-/* // PROVA TEST LOCALE
-KAFKA_URL="192.168.30.12:2181/kafka"
-CLIENT_ID="my-client-id"
-SESSION_TIMEOUT=300
-SPIN_DELAY=100
-RETRIES=2
-TOPIC_1_NAME="creationfeed"
-TOPIC_2_NAME="notification"
-TOPIC_1_TYPE="kylo_feed"
-TOPIC_2_TYPE="generic"
-MAILTO="mailto:daf@teamdigitale.it"
-PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
-PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
-DAF_DATA_USERS_ORIG="new_andrea,raippl"
-URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
-URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
-URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
-URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
-URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" 
-URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group" */
+// PROVA TEST LOCALE
+// KAFKA_URL="192.168.30.12:2181/kafka"
+// CLIENT_ID="my-client-id"
+// SESSION_TIMEOUT=300
+// SPIN_DELAY=100
+// RETRIES=2
+// TOPIC_1_NAME="creationfeed"
+// TOPIC_2_NAME="notification"
+// TOPIC_1_TYPE="kylo_feed"
+// TOPIC_2_TYPE="generic"
+// MAILTO="mailto:daf@teamdigitale.it"
+// PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
+// PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
+// DAF_DATA_USERS_ORIG="new_andrea,raippl"
+// URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
+// URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
+// URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
+// URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
+// URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" 
+// URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group"
+// URL_NIFI_START="http://127.0.0.1:9001/catalog-manager/v1/nifi/start"
 
 //PRODUCTION (CONFIGMAP)
 KAFKA_URL=process.env.KAFKA_URL
@@ -64,16 +65,35 @@ var consumer = new kafka.Consumer(
     ); 
 var offset = new kafka.Offset(client);
 
-offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, data) {
-    let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
-            responseLastWorkedOffset.then((response) => {
-                response.json().then((json) => {
-                    var lastOffset = parseInt(json.offset + 1)
-                    console.log("Last worked offset [TOPIC_1_TYPE]: " + lastOffset);
-                    consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
-                })
+// offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, data) {
+//     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
+//             responseLastWorkedOffset.then((response) => {
+//                 response.json().then((json) => {
+//                     var lastOffset = parseInt(json.offset + 1)
+//                     console.log("Last worked offset [TOPIC_1_TYPE]: " + lastOffset);
+//                     consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
+//                 })
+//             })
+//     })
+
+offset.fetchEarliestOffsets([TOPIC_1_NAME], function (error, offsets) {
+    if (error){
+        console.error(error)
+        return;
+    }else{
+        let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
+        responseLastWorkedOffset.then((response) => {
+            response.json().then((json) => {
+                var lastOffset = parseInt(json.offset + 1)
+                var earliestOffset = offsets[TOPIC_1_NAME][0]
+                console.log("Earliest available offset ["+TOPIC_1_TYPE+"]: " + earliestOffset);
+                console.log("Last worked offset ["+TOPIC_1_TYPE+"]: " + lastOffset);
+                
+                (earliestOffset>lastOffset) ? consumer.setOffset(TOPIC_1_NAME, 0, earliestOffset):consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
             })
-    })
+        })
+    }
+});
 
 var client2 = new kafka.Client(KAFKA_URL, CLIENT_ID, {
     sessionTimeout: SESSION_TIMEOUT,
@@ -92,28 +112,46 @@ var consumer2 = new kafka.Consumer(
 
 var offset2 = new kafka.Offset(client2);
 
- offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
-    let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
+//  offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
+//     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
+//             responseLastWorkedOffset.then((response) => {
+//                 response.json().then((json) => {
+//                     var lastOffset = parseInt(json.offset + 1)
+//                     console.log("Last worked offset [TOPIC_2_TYPE]: " + lastOffset);
+//                     consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
+//                 })
+//             })
+//     }) 
+
+    offset2.fetchEarliestOffsets([TOPIC_2_NAME], function (error, offsets) {
+		if (error){
+            console.error(error)
+            return;
+        }else{
+            let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
                     var lastOffset = parseInt(json.offset + 1)
-                    console.log("Last worked offset [TOPIC_2_TYPE]: " + lastOffset);
-                    consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
+                    var earliestOffset = offsets[TOPIC_2_NAME][0]
+                    console.log("Earliest available offset ["+TOPIC_2_TYPE+"]: " + earliestOffset);
+                    console.log("Last worked offset ["+TOPIC_2_TYPE+"]: " + lastOffset);
+                    
+                    earliestOffset>lastOffset? consumer2.setOffset(TOPIC_2_NAME, 0, earliestOffset):consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
                 })
             })
-    }) 
+        }
+	});
 
-consumer.on('error', function (err) 
-{
-   console.log('Errore nel processare il messaggio, consumer : ' + err.toString());
+consumer.on('error', function (err) {
+   console.log('Errore nel processare il messaggio, consumer : ' + err);
 });
 
-consumer2.on('error', function (err) 
-{
-   console.log('Errore nel processare il messaggio, consumer2: ' + err.toString());
+consumer2.on('error', function (err) {
+   console.log('Errore nel processare il messaggio, consumer2: ' + err);
 });
 
 consumer2.on('message', function(message){
+    console.log(message)
     try{
         console.log('['+message.offset+'] A message from notification: ', message);
         let value = JSON.parse(message.value)
