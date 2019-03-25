@@ -157,7 +157,7 @@ consumer2.on('message', function(message){
         let value = JSON.parse(message.value)
         if(value.user){
             console.log('Insert notification for user: ' + value.user)
-            const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+            const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
             if(notification && value.user && value.token)
                 insertNotification(message, notification, value.user, value.token)
             else console.log('['+message.offset+'] Dati mancanti nel messagio')
@@ -171,7 +171,7 @@ consumer2.on('message', function(message){
                         if(users.length>0){
                             console.log('users: ' + users)
                             for(i=0;i<users.length;i++){
-                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
                                 if(notification && users[i] && value.token)
                                     insertNotification(message, notification, users[i], value.token)
                                 else console.log('['+message.offset+'] Dati mancanti nel messagio')
