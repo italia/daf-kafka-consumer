@@ -157,16 +157,19 @@ consumer2.on('message', function(message){
         if(value.user){
             console.log('Insert notification for user: ' + value.user)
             const notification = {user: value.user, notificationtype:value.notificationtype, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
-            if(notification && value.user && value.token)
+            if(notification && value.user && value.token){
                 insertNotification(message, notification, value.user, value.token)
                 const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
                 updateOffset.then(response => {
-                    if(response.ok)
+                    if(response.ok){
                         console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
-                    else
+                    }else{
                         console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+                    }
                 })
-            else console.log('['+message.offset+'] Dati mancanti nel messagio')
+            }else {
+                console.log('['+message.offset+'] Dati mancanti nel messagio')
+            }
         }else if(value.group){
             console.log('Insert notification for group: ' + value.group)
             let responseUsersGroup = getUsersFormGroup(value.group, value.token);
@@ -180,7 +183,8 @@ consumer2.on('message', function(message){
                                 const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:"info", info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
                                 if(notification && users[i] && value.token)
                                     insertNotification(message, notification, users[i], value.token)
-                                else console.log('['+message.offset+'] Dati mancanti nel messagio')
+                                else
+                                    console.log('['+message.offset+'] Dati mancanti nel messagio')
                             }
                             const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
                             updateOffset.then(response => {
