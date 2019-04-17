@@ -477,7 +477,7 @@ async function getLastWorkedOffset(topicName){
 }
 
 async function updateLastOffset(topicName, offset){
-    const response = await fetch(URL_UPDATE_OFFSET + "/" +topicName, {
+    const response = await fetch(URL_UPDATE_OFFSET , {
         method: 'PUT',
         headers: {
             'Accept': 'application/json',

@@ -19,7 +19,7 @@ kubectl create configmap kafka-consumer-conf \
 --from-literal=urlCatalog="http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/catalog-ds/add" \
 --from-literal=urlKylo="http://catalog-manager.default.svc.cluster.local:9000/catalog-manager/v1/kylo/feed" \
 --from-literal=urlLastWorkedOffset="http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/notifications/offset/last" \
---from-literal=urlUpdateOffset="http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/notifications/offset/update" \
+--from-literal=urlUpdateOffset="http://datipubblici.default.svc.cluster.local:9000/notifications/offset/update" \
 --from-literal=urlNotification="http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/notification/save" \
 --from-literal=urlSub="http://datipubblici.default.svc.cluster.local:9000/dati-gov/v1/subscribe" \
 --from-literal=urlIpaGroup="http://security-manager.default.svc.cluster.local:9000/security-manager/v1/ipa/group" \
