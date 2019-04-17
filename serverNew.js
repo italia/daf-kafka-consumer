@@ -214,7 +214,9 @@ consumer2.on('message', function(message){
                         })
                     }
                 })
+                    .catch(error=> console.log(error))
             })
+                .catch(error=> console.log(error))
             
         }else{
             console.log('['+message.offset+'] Campo user o group non presente nel messaggio ' +  message)
