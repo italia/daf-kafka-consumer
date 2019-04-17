@@ -6,8 +6,6 @@
 // RETRIES=2
 // TOPIC_1_NAME="creationfeed"
 // TOPIC_2_NAME="notification"
-// TOPIC_1_TYPE="kylo_feed"
-// TOPIC_2_TYPE="generic"
 // MAILTO="mailto:daf@teamdigitale.it"
 // PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
 // PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
@@ -39,6 +37,7 @@ URL_KYLO=process.env.URL_KYLO
 URL_CATALOG=process.env.URL_CATALOG
 URL_NOTIFICATION=process.env.URL_NOTIFICATION
 URL_LAST_WORKED_OFFSET=process.env.URL_LAST_WORKED_OFFSET
+URL_UPDATE_OFFSET=process.env.URL_UPDATE_OFFSET
 URL_IPA_GROUP=process.env.URL_IPA_GROUP 
 URL_NIFI_START=process.env.URL_NIFI_START
 
@@ -81,13 +80,13 @@ offset.fetchEarliestOffsets([TOPIC_1_NAME], function (error, offsets) {
         console.error(error)
         return;
     }else{
-        let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
+        let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_NAME);
         responseLastWorkedOffset.then((response) => {
             response.json().then((json) => {
                 var lastOffset = parseInt(json.offset + 1)
                 var earliestOffset = offsets[TOPIC_1_NAME][0]
-                console.log("Earliest available offset ["+TOPIC_1_TYPE+"]: " + earliestOffset);
-                console.log("Last worked offset ["+TOPIC_1_TYPE+"]: " + lastOffset);
+                console.log("Earliest available offset ["+TOPIC_1_NAME+"]: " + earliestOffset);
+                console.log("Last worked offset ["+TOPIC_1_NAME+"]: " + lastOffset);
                 
                 (earliestOffset>lastOffset) ? consumer.setOffset(TOPIC_1_NAME, 0, earliestOffset):consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
             })
@@ -128,13 +127,13 @@ var offset2 = new kafka.Offset(client2);
             console.error(error)
             return;
         }else{
-            let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
+            let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_NAME);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
                     var lastOffset = parseInt(json.offset + 1)
                     var earliestOffset = offsets[TOPIC_2_NAME][0]
-                    console.log("Earliest available offset ["+TOPIC_2_TYPE+"]: " + earliestOffset);
-                    console.log("Last worked offset ["+TOPIC_2_TYPE+"]: " + lastOffset);
+                    console.log("Earliest available offset ["+TOPIC_2_NAME+"]: " + earliestOffset);
+                    console.log("Last worked offset ["+TOPIC_2_NAME+"]: " + lastOffset);
                     
                     earliestOffset>lastOffset? consumer2.setOffset(TOPIC_2_NAME, 0, earliestOffset):consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
                 })
@@ -151,15 +150,22 @@ consumer2.on('error', function (err) {
 });
 
 consumer2.on('message', function(message){
-    console.log(message)
+    //console.log(message)
     try{
         console.log('['+message.offset+'] A message from notification: ', message);
         let value = JSON.parse(message.value)
         if(value.user){
             console.log('Insert notification for user: ' + value.user)
-            const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
+            const notification = {user: value.user, notificationtype:value.notificationtype, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
             if(notification && value.user && value.token)
                 insertNotification(message, notification, value.user, value.token)
+                const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+                updateOffset.then(response => {
+                    if(response.ok)
+                        console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
+                    else
+                        console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+                })
             else console.log('['+message.offset+'] Dati mancanti nel messagio')
         }else if(value.group){
             console.log('Insert notification for group: ' + value.group)
@@ -171,16 +177,37 @@ consumer2.on('message', function(message){
                         if(users.length>0){
                             console.log('users: ' + users)
                             for(i=0;i<users.length;i++){
-                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
+                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:"info", info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
                                 if(notification && users[i] && value.token)
                                     insertNotification(message, notification, users[i], value.token)
                                 else console.log('['+message.offset+'] Dati mancanti nel messagio')
                             }
+                            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+                            updateOffset.then(response => {
+                                if(response.ok)
+                                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
+                                else
+                                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+                            })
                         } else {
                             console.log('['+message.offset+'] Non sono stati trovati utenti appartenenti al gruppo: ' + value.group)
+                            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+                            updateOffset.then(response => {
+                                if(response.ok)
+                                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
+                                else
+                                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+                            })
                         }
                     } else {
                         console.log('['+message.offset+'] Non è stato possibile reperire gli utenti appartenenti al gruppo: ' + value.group)
+                        const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+                        updateOffset.then(response => {
+                            if(response.ok)
+                                console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
+                            else
+                                console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+                        })
                     }
                 })
             })
@@ -220,6 +247,13 @@ consumer.on('message', function (message)
 
                     if(!response.ok){
                         insertError(value, message, json)
+                        const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
+                        updateOffset.then(response => {
+                            if(response.ok)
+                                console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
+                            else
+                                console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
+                        })
                     }else{
                         try{
                             var jsonParse = JSON.parse(json.fields)
@@ -237,8 +271,22 @@ consumer.on('message', function (message)
                                   }
                                 }
                                 insertSuccess(value, message)
+                                const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
+                                updateOffset.then(response => {
+                                    if(response.ok)
+                                        console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
+                                    else
+                                        console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
+                                })
                             }else 
                                 insertError(value, message, json)
+                                const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
+                                updateOffset.then(response => {
+                                    if(response.ok)
+                                        console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
+                                    else
+                                        console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
+                                })
                         } catch (errors){
                             console.log('['+message.offset+'] Errore generico, campo fields non presente 2')
                         }
@@ -280,7 +328,7 @@ function insertSuccess(value, message){
                 console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
             }
             for(j=0;j<daf_data_users.length;j++){
-                const notificationSuccess = {user: daf_data_users[j], notificationtype:TOPIC_1_TYPE, info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title}, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                const notificationSuccess = {user: daf_data_users[j], notificationtype:"success", info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title}, timestamp: getFormattedDate() , status:0, offset: message.offset}
                 console.log('['+message.offset+'] Aggiungo notifica SUCCESS ad utente ' + daf_data_users[j])
                 insertNotification(message, notificationSuccess, daf_data_users[j], value.token)
             }
@@ -313,7 +361,7 @@ function insertError(value, message, json){
         console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
     }
     for(j=0;j<daf_data_users.length;j++){
-        const notificationError = {user: daf_data_users[j], notificationtype: TOPIC_1_TYPE + '_error', info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
+        const notificationError = {user: daf_data_users[j], notificationtype: 'error', info:{name: value.payload.dcatapit.name, description: "C'è stato un problema nella creazione del dataset "+ value.payload.dcatapit.title, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
         console.log('['+message.offset+'] Aggiungo notifica ERROR ad utente ' + daf_data_users[j])
         insertNotification(message, notificationError, daf_data_users[j], value.token)
 
@@ -418,6 +466,18 @@ async function getLastWorkedOffset(topicName){
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
+    })
+    return response;
+}
+
+async function updateLastOffset(topicName, offset){
+    const response = await fetch(URL_UPDATE_OFFSET + "/" +topicName, {
+        method: 'PUT',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({"topicName": topicName, "offset": offset})
     })
     return response;
 }
