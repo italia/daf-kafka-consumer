@@ -14,7 +14,8 @@
 // URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
 // URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
 // URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
-// URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" 
+// URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last"
+// URL_UPDATE_OFFSET="http://127.0.0.1:9000/notifications/offset/update"
 // URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group"
 // URL_NIFI_START="http://127.0.0.1:9001/catalog-manager/v1/nifi/start"
 
@@ -26,8 +27,6 @@ SPIN_DELAY=100
 RETRIES=2
 TOPIC_1_NAME=process.env.TOPIC_1_NAME
 TOPIC_2_NAME=process.env.TOPIC_2_NAME
-TOPIC_1_TYPE=process.env.TOPIC_1_TYPE
-TOPIC_2_TYPE=process.env.TOPIC_2_TYPE
 MAILTO=process.env.MAILTO
 PUBLIC_VAPID_KEY=process.env.PUBLIC_VAPID_KEY
 PRIVATE_VAPID_KEY=process.env.PRIVATE_VAPID_KEY
@@ -38,7 +37,7 @@ URL_CATALOG=process.env.URL_CATALOG
 URL_NOTIFICATION=process.env.URL_NOTIFICATION
 URL_LAST_WORKED_OFFSET=process.env.URL_LAST_WORKED_OFFSET
 URL_UPDATE_OFFSET=process.env.URL_UPDATE_OFFSET
-URL_IPA_GROUP=process.env.URL_IPA_GROUP 
+URL_IPA_GROUP=process.env.URL_IPA_GROUP
 URL_NIFI_START=process.env.URL_NIFI_START
 
 var fetch = require('isomorphic-fetch')
@@ -154,19 +153,22 @@ consumer2.on('message', function(message){
     try{
         console.log('['+message.offset+'] A message from notification: ', message);
         let value = JSON.parse(message.value)
+        if(message.offset === message.highWaterOffset-1){
+            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+            updateOffset.then(response => {
+                if(response.ok)
+                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly #"+message.offset)
+                else
+                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+
+            })
+        }
+
         if(value.user){
             console.log('Insert notification for user: ' + value.user)
             const notification = {user: value.user, notificationtype:value.notificationtype, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
             if(notification && value.user && value.token){
                 insertNotification(message, notification, value.user, value.token)
-                const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
-                updateOffset.then(response => {
-                    if(response.ok){
-                        console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
-                    }else{
-                        console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
-                    }
-                })
             }else {
                 console.log('['+message.offset+'] Dati mancanti nel messagio')
             }
@@ -186,38 +188,17 @@ consumer2.on('message', function(message){
                                 else
                                     console.log('['+message.offset+'] Dati mancanti nel messagio')
                             }
-                            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
-                            updateOffset.then(response => {
-                                if(response.ok)
-                                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
-                                else
-                                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
-                            })
                         } else {
                             console.log('['+message.offset+'] Non sono stati trovati utenti appartenenti al gruppo: ' + value.group)
-                            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
-                            updateOffset.then(response => {
-                                if(response.ok)
-                                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
-                                else
-                                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
-                            })
                         }
                     } else {
                         console.log('['+message.offset+'] Non è stato possibile reperire gli utenti appartenenti al gruppo: ' + value.group)
-                        const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
-                        updateOffset.then(response => {
-                            if(response.ok)
-                                console.log(TOPIC_2_NAME + ": Last worked offset updated correctly")
-                            else
-                                console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
-                        })
                     }
                 })
                     .catch(error=> console.log(error))
             })
                 .catch(error=> console.log(error))
-            
+
         }else{
             console.log('['+message.offset+'] Campo user o group non presente nel messaggio ' +  message)
         }
@@ -229,6 +210,16 @@ consumer2.on('message', function(message){
 consumer.on('message', function (message) 
 {
     console.log('['+message.offset+'] Processo messaggio');
+
+    if(message.offset === message.highWaterOffset-1){
+        const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
+        updateOffset.then(response => {
+            if(response.ok)
+                console.log(TOPIC_1_NAME + ": Last worked offset updated correctly #"+message.offset)
+            else
+                console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
+        })
+}
     try{
         let value = JSON.parse(message.value)
         let responseKylo = createKyloFeed(value);
@@ -253,13 +244,7 @@ consumer.on('message', function (message)
 
                     if(!response.ok){
                         insertError(value, message, json)
-                        const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
-                        updateOffset.then(response => {
-                            if(response.ok)
-                                console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
-                            else
-                                console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
-                        })
+
                     }else{
                         try{
                             var jsonParse = JSON.parse(json.fields)
@@ -277,22 +262,9 @@ consumer.on('message', function (message)
                                   }
                                 }
                                 insertSuccess(value, message)
-                                const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
-                                updateOffset.then(response => {
-                                    if(response.ok)
-                                        console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
-                                    else
-                                        console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
-                                })
-                            }else 
+
+                            }else
                                 insertError(value, message, json)
-                                const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
-                                updateOffset.then(response => {
-                                    if(response.ok)
-                                        console.log(TOPIC_1_NAME + ": Last worked offset updated correctly")
-                                    else
-                                        console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
-                                })
                         } catch (errors){
                             console.log('['+message.offset+'] Errore generico, campo fields non presente 2')
                         }
