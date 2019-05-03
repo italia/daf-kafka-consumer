@@ -306,7 +306,7 @@ function insertSuccess(value, message){
                 console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
             }
             for(j=0;j<daf_data_users.length;j++){
-                const notificationSuccess = {user: daf_data_users[j], notificationtype:"success", info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title}, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                const notificationSuccess = {user: daf_data_users[j], notificationtype:"success", info:{name: value.payload.dcatapit.name, description:'Il dataset ' +value.payload.dcatapit.title+' è stato creato correttamente', title: value.payload.dcatapit.title}, createDate: getFormattedDate() , status:0, offset: message.offset}
                 console.log('['+message.offset+'] Aggiungo notifica SUCCESS ad utente ' + daf_data_users[j])
                 insertNotification(message, notificationSuccess, daf_data_users[j], value.token)
             }
@@ -339,7 +339,7 @@ function insertError(value, message, json){
         console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
     }
     for(j=0;j<daf_data_users.length;j++){
-        const notificationError = {user: daf_data_users[j], notificationtype: 'error', info:{name: value.payload.dcatapit.name, description: "C'è stato un problema nella creazione del dataset "+ value.payload.dcatapit.title, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
+        const notificationError = {user: daf_data_users[j], notificationtype: 'error', info:{name: value.payload.dcatapit.name, description: "C'è stato un problema nella creazione del dataset "+ value.payload.dcatapit.title, title: value.payload.dcatapit.title, errors: errorsMsg}, createDate: getFormattedDate() , status:0, offset: message.offset}
         console.log('['+message.offset+'] Aggiungo notifica ERROR ad utente ' + daf_data_users[j])
         insertNotification(message, notificationError, daf_data_users[j], value.token)
 
