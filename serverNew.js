@@ -1,23 +1,23 @@
-/* // PROVA TEST LOCALE
-KAFKA_URL="192.168.30.12:2181/kafka"
-CLIENT_ID="my-client-id"
-SESSION_TIMEOUT=300
-SPIN_DELAY=100
-RETRIES=2
-TOPIC_1_NAME="creationfeed"
-TOPIC_2_NAME="notification"
-TOPIC_1_TYPE="kylo_feed"
-TOPIC_2_TYPE="generic"
-MAILTO="mailto:daf@teamdigitale.it"
-PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
-PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
-DAF_DATA_USERS_ORIG="new_andrea,raippl"
-URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
-URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
-URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
-URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
-URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last" 
-URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group" */
+// PROVA TEST LOCALE
+// KAFKA_URL="192.168.30.12:2181/kafka"
+// CLIENT_ID="my-client-id"
+// SESSION_TIMEOUT=300
+// SPIN_DELAY=100
+// RETRIES=2
+// TOPIC_1_NAME="creationfeed"
+// TOPIC_2_NAME="notification"
+// MAILTO="mailto:daf@teamdigitale.it"
+// PUBLIC_VAPID_KEY="BI28-LsMRvryKklb9uk84wCwzfyiCYtb8cTrIgkXtP3EYlnwq7jPzOyhda1OdyCd1jqvrJZU06xHSWSxV1eZ_0o"
+// PRIVATE_VAPID_KEY="_raRRUIefbg4QjqZit7lnqGC5Zh1z6SvQ2p2HGgjobg"
+// DAF_DATA_USERS_ORIG="new_andrea,raippl"
+// URL_KYLO="http://127.0.0.1:9001/catalog-manager/v1/kylo/feed"
+// URL_CATALOG="http://127.0.0.1:9001/catalog-manager/v1/catalog-ds/add"
+// URL_SUB="http://127.0.0.1:9000/dati-gov/v1/subscribe"
+// URL_NOTIFICATION="http://127.0.0.1:9000/dati-gov/v1/notification/save"
+// URL_LAST_WORKED_OFFSET="http://127.0.0.1:9000/dati-gov/v1/notifications/offset/last"
+// URL_UPDATE_OFFSET="http://127.0.0.1:9000/notifications/offset/update"
+// URL_IPA_GROUP="http://127.0.0.1:9002/security-manager/v1/ipa/group"
+// URL_NIFI_START="http://127.0.0.1:9001/catalog-manager/v1/nifi/start"
 
 //PRODUCTION (CONFIGMAP)
 KAFKA_URL=process.env.KAFKA_URL
@@ -27,8 +27,6 @@ SPIN_DELAY=100
 RETRIES=2
 TOPIC_1_NAME=process.env.TOPIC_1_NAME
 TOPIC_2_NAME=process.env.TOPIC_2_NAME
-TOPIC_1_TYPE=process.env.TOPIC_1_TYPE
-TOPIC_2_TYPE=process.env.TOPIC_2_TYPE
 MAILTO=process.env.MAILTO
 PUBLIC_VAPID_KEY=process.env.PUBLIC_VAPID_KEY
 PRIVATE_VAPID_KEY=process.env.PRIVATE_VAPID_KEY
@@ -38,7 +36,8 @@ URL_KYLO=process.env.URL_KYLO
 URL_CATALOG=process.env.URL_CATALOG
 URL_NOTIFICATION=process.env.URL_NOTIFICATION
 URL_LAST_WORKED_OFFSET=process.env.URL_LAST_WORKED_OFFSET
-URL_IPA_GROUP=process.env.URL_IPA_GROUP 
+URL_UPDATE_OFFSET=process.env.URL_UPDATE_OFFSET
+URL_IPA_GROUP=process.env.URL_IPA_GROUP
 URL_NIFI_START=process.env.URL_NIFI_START
 
 var fetch = require('isomorphic-fetch')
@@ -64,16 +63,35 @@ var consumer = new kafka.Consumer(
     ); 
 var offset = new kafka.Offset(client);
 
-offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, data) {
-    let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
-            responseLastWorkedOffset.then((response) => {
-                response.json().then((json) => {
-                    var lastOffset = parseInt(json.offset + 1)
-                    console.log("Last worked offset [TOPIC_1_TYPE]: " + lastOffset);
-                    consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
-                })
+// offset.fetch([{ topic: TOPIC_1_NAME, partition: 0, time: -1 }], function (err, data) {
+//     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_TYPE);
+//             responseLastWorkedOffset.then((response) => {
+//                 response.json().then((json) => {
+//                     var lastOffset = parseInt(json.offset + 1)
+//                     console.log("Last worked offset [TOPIC_1_TYPE]: " + lastOffset);
+//                     consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
+//                 })
+//             })
+//     })
+
+offset.fetchEarliestOffsets([TOPIC_1_NAME], function (error, offsets) {
+    if (error){
+        console.error(error)
+        return;
+    }else{
+        let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_1_NAME);
+        responseLastWorkedOffset.then((response) => {
+            response.json().then((json) => {
+                var lastOffset = parseInt(json.offset + 1)
+                var earliestOffset = offsets[TOPIC_1_NAME][0]
+                console.log("Earliest available offset ["+TOPIC_1_NAME+"]: " + earliestOffset);
+                console.log("Last worked offset ["+TOPIC_1_NAME+"]: " + lastOffset);
+                
+                (earliestOffset>lastOffset) ? consumer.setOffset(TOPIC_1_NAME, 0, earliestOffset):consumer.setOffset(TOPIC_1_NAME, 0, lastOffset)
             })
-    })
+        })
+    }
+});
 
 var client2 = new kafka.Client(KAFKA_URL, CLIENT_ID, {
     sessionTimeout: SESSION_TIMEOUT,
@@ -92,37 +110,68 @@ var consumer2 = new kafka.Consumer(
 
 var offset2 = new kafka.Offset(client2);
 
- offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
-    let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
+//  offset2.fetch([{ topic: TOPIC_2_NAME, partition: 0, time: -1 }], function (err, data) {
+//     let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_TYPE);
+//             responseLastWorkedOffset.then((response) => {
+//                 response.json().then((json) => {
+//                     var lastOffset = parseInt(json.offset + 1)
+//                     console.log("Last worked offset [TOPIC_2_TYPE]: " + lastOffset);
+//                     consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
+//                 })
+//             })
+//     }) 
+
+    offset2.fetchEarliestOffsets([TOPIC_2_NAME], function (error, offsets) {
+		if (error){
+            console.error(error)
+            return;
+        }else{
+            let responseLastWorkedOffset = getLastWorkedOffset(TOPIC_2_NAME);
             responseLastWorkedOffset.then((response) => {
                 response.json().then((json) => {
                     var lastOffset = parseInt(json.offset + 1)
-                    console.log("Last worked offset [TOPIC_2_TYPE]: " + lastOffset);
-                    consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
+                    var earliestOffset = offsets[TOPIC_2_NAME][0]
+                    console.log("Earliest available offset ["+TOPIC_2_NAME+"]: " + earliestOffset);
+                    console.log("Last worked offset ["+TOPIC_2_NAME+"]: " + lastOffset);
+                    
+                    earliestOffset>lastOffset? consumer2.setOffset(TOPIC_2_NAME, 0, earliestOffset):consumer2.setOffset(TOPIC_2_NAME, 0, lastOffset)
                 })
             })
-    }) 
+        }
+	});
 
-consumer.on('error', function (err) 
-{
-   console.log('Errore nel processare il messaggio, consumer : ' + err.toString());
+consumer.on('error', function (err) {
+   console.log('Errore nel processare il messaggio, consumer : ' + err);
 });
 
-consumer2.on('error', function (err) 
-{
-   console.log('Errore nel processare il messaggio, consumer2: ' + err.toString());
+consumer2.on('error', function (err) {
+   console.log('Errore nel processare il messaggio, consumer2: ' + err);
 });
 
 consumer2.on('message', function(message){
+    //console.log(message)
     try{
         console.log('['+message.offset+'] A message from notification: ', message);
         let value = JSON.parse(message.value)
+        if(message.offset === message.highWaterOffset-1){
+            const updateOffset = updateLastOffset(TOPIC_2_NAME, message.offset)
+            updateOffset.then(response => {
+                if(response.ok)
+                    console.log(TOPIC_2_NAME + ": Last worked offset updated correctly #"+message.offset)
+                else
+                    console.log(TOPIC_2_NAME + ": Last worked offset not updated error code " + response.code)
+
+            })
+        }
+
         if(value.user){
             console.log('Insert notification for user: ' + value.user)
-            const notification = {user: value.user, notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
-            if(notification && value.user && value.token)
+            const notification = {user: value.user, notificationtype:value.notificationtype, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
+            if(notification && value.user && value.token){
                 insertNotification(message, notification, value.user, value.token)
-            else console.log('['+message.offset+'] Dati mancanti nel messagio')
+            }else {
+                console.log('['+message.offset+'] Dati mancanti nel messagio')
+            }
         }else if(value.group){
             console.log('Insert notification for group: ' + value.group)
             let responseUsersGroup = getUsersFormGroup(value.group, value.token);
@@ -133,10 +182,11 @@ consumer2.on('message', function(message){
                         if(users.length>0){
                             console.log('users: ' + users)
                             for(i=0;i<users.length;i++){
-                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:TOPIC_2_TYPE, info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                                const notification = {user: users[i], notificationtype:value.notificationtype?value.notificationtype:"info", info:{name: value.info.name, title: value.info.title, description: value.info.description, link: value.info.link }, createDate: getFormattedDate() , endDate: value.endDate?value.endDate:null, status:0, offset: message.offset}
                                 if(notification && users[i] && value.token)
                                     insertNotification(message, notification, users[i], value.token)
-                                else console.log('['+message.offset+'] Dati mancanti nel messagio')
+                                else
+                                    console.log('['+message.offset+'] Dati mancanti nel messagio')
                             }
                         } else {
                             console.log('['+message.offset+'] Non sono stati trovati utenti appartenenti al gruppo: ' + value.group)
@@ -145,8 +195,10 @@ consumer2.on('message', function(message){
                         console.log('['+message.offset+'] Non è stato possibile reperire gli utenti appartenenti al gruppo: ' + value.group)
                     }
                 })
+                    .catch(error=> console.log(error))
             })
-            
+                .catch(error=> console.log(error))
+
         }else{
             console.log('['+message.offset+'] Campo user o group non presente nel messaggio ' +  message)
         }
@@ -158,6 +210,16 @@ consumer2.on('message', function(message){
 consumer.on('message', function (message) 
 {
     console.log('['+message.offset+'] Processo messaggio');
+
+    if(message.offset === message.highWaterOffset-1){
+        const updateOffset = updateLastOffset(TOPIC_1_NAME, message.offset)
+        updateOffset.then(response => {
+            if(response.ok)
+                console.log(TOPIC_1_NAME + ": Last worked offset updated correctly #"+message.offset)
+            else
+                console.log(TOPIC_1_NAME + ": Last worked offset not updated error code " + response.code)
+        })
+}
     try{
         let value = JSON.parse(message.value)
         let responseKylo = createKyloFeed(value);
@@ -182,6 +244,7 @@ consumer.on('message', function (message)
 
                     if(!response.ok){
                         insertError(value, message, json)
+
                     }else{
                         try{
                             var jsonParse = JSON.parse(json.fields)
@@ -199,7 +262,8 @@ consumer.on('message', function (message)
                                   }
                                 }
                                 insertSuccess(value, message)
-                            }else 
+
+                            }else
                                 insertError(value, message, json)
                         } catch (errors){
                             console.log('['+message.offset+'] Errore generico, campo fields non presente 2')
@@ -242,7 +306,7 @@ function insertSuccess(value, message){
                 console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
             }
             for(j=0;j<daf_data_users.length;j++){
-                const notificationSuccess = {user: daf_data_users[j], notificationtype:TOPIC_1_TYPE, info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title}, timestamp: getFormattedDate() , status:0, offset: message.offset}
+                const notificationSuccess = {user: daf_data_users[j], notificationtype:"success", info:{name: value.payload.dcatapit.name, description:'Il dataset ' +value.payload.dcatapit.title+' è stato creato correttamente', title: value.payload.dcatapit.title}, createDate: getFormattedDate() , status:0, offset: message.offset}
                 console.log('['+message.offset+'] Aggiungo notifica SUCCESS ad utente ' + daf_data_users[j])
                 insertNotification(message, notificationSuccess, daf_data_users[j], value.token)
             }
@@ -275,7 +339,7 @@ function insertError(value, message, json){
         console.log('['+message.offset+'] Aggiungo utente tra daf_data_user per invio errore')
     }
     for(j=0;j<daf_data_users.length;j++){
-        const notificationError = {user: daf_data_users[j], notificationtype: TOPIC_1_TYPE + '_error', info:{name: value.payload.dcatapit.name, title: value.payload.dcatapit.title, errors: errorsMsg}, timestamp: getFormattedDate() , status:0, offset: message.offset} 
+        const notificationError = {user: daf_data_users[j], notificationtype: 'error', info:{name: value.payload.dcatapit.name, description: "C'è stato un problema nella creazione del dataset "+ value.payload.dcatapit.title, title: value.payload.dcatapit.title, errors: errorsMsg}, createDate: getFormattedDate() , status:0, offset: message.offset}
         console.log('['+message.offset+'] Aggiungo notifica ERROR ad utente ' + daf_data_users[j])
         insertNotification(message, notificationError, daf_data_users[j], value.token)
 
@@ -380,6 +444,18 @@ async function getLastWorkedOffset(topicName){
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
+    })
+    return response;
+}
+
+async function updateLastOffset(topicName, offset){
+    const response = await fetch(URL_UPDATE_OFFSET , {
+        method: 'PUT',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({"topicName": topicName, "offset": offset})
     })
     return response;
 }
