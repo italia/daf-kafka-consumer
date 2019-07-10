@@ -40,7 +40,6 @@ This project depends by the following components.
 
 ## How to install and use DAF Kafka Consumer
 
-> Insert here a brief documentation to use this project as an end-user (not a developer) if applicable, including pre-requisites and internal and external dependencies. Insert a link to an extended documentation (user manual) if present.
 
 ### Clone the project 
 ```
