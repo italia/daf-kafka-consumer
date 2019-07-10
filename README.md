@@ -17,7 +17,6 @@ DAF Kafka Consumer is a backend component based on NodeJS. The aim of this compo
 the input of a new message in two different kafka topics,*creationfeed* and *notifications*, 
 and process the messages to (in order) create a new dataset and insert a specific notification.
 
-<!--> Insert here informations about files and folders structure, branch model adopted and release policy.-->
 
 All the active code is available in the file `serverNew.js` on the **master** branch. To add new feature create a new _feature branch_ from 
 master. 
