@@ -12,7 +12,6 @@ You can find more informations about the PDND on the official [Digital Transform
 
 ## What is DAF Kafka Consumer?
 
-<!--> Insert here an extended description of the project with informations about context, goals, stakeholders, use cases, and finally the role of the project within the PDND with links to other repositories requiring this code or this code depends on. Embed also screenshots or video if present to give a preview of the application.-->
 
 DAF Kafka Consumer is a backend component based on NodeJS. The aim of this component is to listen 
 the input of a new message in two different kafka topics,*creationfeed* and *notifications*, 
