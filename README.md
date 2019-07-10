@@ -67,7 +67,6 @@ To make the component work you need to have a running Kafka service and configur
 connection to Kafka
 ## How to build and test DAF Kafka Consumer
 
-<!--> Insert here a brief documentation for the developer to build, test and contribute. Insert a link to an extended documentation (developer manual) if present.-->
 To build the component you can use Docker:
 ```
 sudo docker build --no-cache -t <YOUR_DOCKER_IMAGE_NAME> .
