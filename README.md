@@ -74,7 +74,7 @@ sudo docker build --no-cache -t <YOUR_DOCKER_IMAGE_NAME> .
 
 ## How to contribute
 
-Contributions are welcome. Feel free to [open issues](./issues) and submit a [pull request](./pulls) at any time, but please read [our handbook](https://github.com/teamdigitale/daf-handbook) first.
+Contributions are welcome. Feel free to [open issues](../../issues) and submit a [pull request](../../pulls) at any time, but please read [our handbook](https://github.com/teamdigitale/daf-handbook) first.
 
 ## License
 
