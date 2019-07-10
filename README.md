@@ -1,5 +1,4 @@
 # DAF Kafka Consumer for Piattaforma Digitale Nazionale Dati (PDND), previously DAF
-<!--> Insert here a brief description of what your repository contains. Insert also links to the last release, the official page, the extended documentation, and other useful external resources.-->
 
 The DAF Kafka Consumer is a backend component with the aim to consume all messages written in the kafka topics to create 
 new datasets and notifications for PDND.
@@ -13,16 +12,15 @@ You can find more informations about the PDND on the official [Digital Transform
 
 ## What is DAF Kafka Consumer?
 
-<!--> Insert here an extended description of the project with informations about context, goals, stakeholders, use cases, and finally the role of the project within the PDND with links to other repositories requiring this code or this code depends on. Embed also screenshots or video if present to give a preview of the application.-->
-
 DAF Kafka Consumer is a backend component based on NodeJS. The aim of this component is to listen 
 the input of a new message in two different kafka topics,*creationfeed* and *notifications*, 
 and process the messages to (in order) create a new dataset and insert a specific notification.
 
-<!--> Insert here informations about files and folders structure, branch model adopted and release policy.-->
+All the production ready code is available in the file `serverNew.js` on the **master** branch. 
 
-All the active code is available in the file `serverNew.js` on the **master** branch. To add new feature create a new _feature branch_ from 
-master. 
+The **dev** branch has the code ready to test in development environment. 
+
+To add new feature create a new _feature branch_ from **dev**. 
 ### Tools references
 
 This project references the following tools.
@@ -42,8 +40,6 @@ This project depends by the following components.
 * **DAF Dataportal Backend** available [here](https://github.com/italia/daf-dataportal-backend)
 
 ## How to install and use DAF Kafka Consumer
-
-> Insert here a brief documentation to use this project as an end-user (not a developer) if applicable, including pre-requisites and internal and external dependencies. Insert a link to an extended documentation (user manual) if present.
 
 ### Clone the project 
 ```
@@ -71,7 +67,6 @@ To make the component work you need to have a running Kafka service and configur
 connection to Kafka
 ## How to build and test DAF Kafka Consumer
 
-<!--> Insert here a brief documentation for the developer to build, test and contribute. Insert a link to an extended documentation (developer manual) if present.-->
 To build the component you can use Docker:
 ```
 sudo docker build --no-cache -t <YOUR_DOCKER_IMAGE_NAME> .
